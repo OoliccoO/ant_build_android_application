@@ -1,0 +1,543 @@
+<project
+    name="Test"
+    basedir="/Users/Licc/Documents/work/data/ANT_Mac/TestAnt/Test"
+    default="release">
+
+    <!--
+    快速读懂：
+    针对当前build文件，自动化执行入口名称为default="release"（一个target），在执行该target前需要先执行完depends中描述的target，
+    依次类推便实现了自动化执行。
+    -->
+
+    <description>
+        just a test for mac os （more information: http://ant.apache.org/manual/usinglist.html）
+    </description>
+
+    <!--
+    流程概述：
+    (1). 生成用于主应用的R.java;
+    (2). 生成用于库应用的R.java(如果有库应用);
+    (3). 编译所有java文件为class文件;
+    (4). 打包class文件和jar包为classes.dex;
+    (5). 打包assets和res资源为资源压缩包(如res.zip，名字可以自己定义);
+    (6). 组合classes.dex和res.zip生成未签名的APK;
+    (7). 生成有签名的APK;
+    -->
+
+    <!-- ======================================================================= -->
+
+    <!-- <property environment="env" /> -->
+    <!-- <import file="./custom_rules.xml" optional="true" /> -->
+
+    <!-- 设置全局属性 -->
+
+    <!-- 应用名称，版本号，版本名称等 -->
+    <property name="appName" value="ant_packaging_release" />
+    <property name="version-code" value="2" />
+    <property name="version-name" value="1.1.0" />
+    <property name="min-sdk-version" value="19" />
+    <property name="target-sdk-version" value="21" />
+
+    <property name="jar.app.name" value="main.jar"/>
+
+    <!-- 签名证书文件(请使用自己的key) -->
+    <property name="keystore-file" value="${basedir}/key.keystore" />
+
+    <!-- SDK目录 -->
+    <property name="sdk-folder" value="/Users/Licc/Library/Android/sdk" />
+
+    <!-- SDK指定平台目录 -->
+    <property name="sdk-platform-folder" value="${sdk-folder}/platforms/android-21" />
+
+    <!-- SDK中tools目录 -->
+    <property name="sdk-tools" value="${sdk-folder}/tools" />
+
+    <!-- SDK指定平台中tools目录 -->
+    <property name="sdk-platform-tools" value="${sdk-folder}/build-tools/27.0.3" />
+    <!--<property name="sdk-platform-tools" value="${sdk-folder}/build-tools/21.1.2" />-->
+
+    <!-- Android Asset Packaging Tool，Android资源打包工具 -->
+    <property name="aapt" value="${sdk-platform-tools}/aapt" />
+
+    <!-- Android Interface definition language，将aidl转为java -->
+    <property name="aidl" value="${sdk-platform-tools}/aidl" />
+
+    <!-- android将jar包转成dex格式 -->
+    <property name="dx" value="${sdk-platform-tools}/dx" />
+
+    <!-- 【★】旧SDK时使用apkbuilder生成apk -->
+    <!-- <property name="apkbuilder" value="${sdk-tools}/apkbuilder" />-->
+
+    <!-- jdk目录 -->
+    <property name="jdk-folder" value="/Library/Java/JavaVirtualMachines/jdk1.8.0_101.jdk/Contents/Home" />
+
+    <!-- jar 签名和校验工具 -->
+    <property name="jarsigner" value="${jdk-folder}/bin/jarsigner" />
+
+    <!-- 编译需要的平台android.jar -->
+    <property name="android-jar" value="${sdk-platform-folder}/android.jar" />
+
+    <!-- 编译aidl文件所需的预处理框架文件framework.aidl -->
+    <property name="framework-aidl" value="${sdk-platform-folder}/framework.aidl" />
+
+    <!-- 生成R文件的相对目录 -->
+    <property name="outdir-gen" value="gen" />
+
+    <!-- 编译后的文件放置目录（临时目录）-->
+    <property name="outdir-bin" value="bin" />
+
+    <!-- 发布目录-->
+    <property name="outdir-release" value="release" />
+
+    <!-- AndroidManifest.xml（清单文件）文件 -->
+    <property name="manifest-xml" value="AndroidManifest.xml" />
+
+    <!-- 静态资源文件目录 -->
+    <property name="resource-dir" value="res" />
+    <property name="asset-dir" value="assets" />
+
+    <!-- java源文件目录 -->
+    <property name="srcdir" value="src" />
+    <property name="srcdir-ospath" value="${basedir}/${srcdir}" />
+
+    <!-- 第三方架包 -->
+    <property name="external-lib" value="libs" />
+    <property name="external-lib-ospath" value="${basedir}/${external-lib}" />
+
+    <!-- 存放class的主目录 -->
+    <property name="outdir-classes" value="${outdir-bin}" />
+    <property name="outdir-classes-ospath" value="${basedir}/${outdir-classes}" />
+
+    <!-- classes.dex相关变量（目录和文件名） -->
+    <property name="dex-file" value="classes_out.dex" />
+    <property name="dex-path" value="${outdir-bin}/${dex-file}" />
+    <property name="dex-ospath" value="${basedir}/${dex-path}" />
+
+    <!-- 经过aapt生成的静态资源包文件 -->
+    <property name="resources-package" value="${outdir-bin}/resources.zip" />
+    <property name="resources-package-ospath" value="${basedir}/${resources-package}" />
+
+    <!-- 引用到的库 -->
+    <property name="library-dir1" value="/Users/Licc/Documents/work/data/ANT_Mac/TestAnt/Library" />
+
+    <!-- 未签名的apk包信息 -->
+    <property name="out-unsigned-package" value="${outdir-bin}/${appName}_unsigned.apk" />
+    <property name="out-unsigned-package-ospath" value="${basedir}/${out-unsigned-package}" />
+
+    <!-- 签名apk包信息 -->
+    <property name="out-signed-package" value="${outdir-release}/${appName}.apk" />
+    <property name="out-signed-package-ospath" value="${basedir}/${out-signed-package}" />
+
+
+    <!-- ////////////////// 分包相关的设置（start） ////////////////// -->
+
+    <!-- 注意，在Test项目中还包含了一个名为ant的文件夹，包含了分包过程中需要的jar -->
+    <property name="zipalign" value="${sdk-platform-tools}/zipalign" />
+    <!-- 提供测试数据：提供全部的jar的路径 -->
+    <path id="project.all.jars.path">
+        <fileset dir="${basedir}/libs" includes="*.jar"/>
+        <fileset dir="${library-dir1}/libs" includes="*.jar"/>
+    </path>
+    <!-- 需要分包的jar路径集 -->
+    <path id="out.dex.jar.assets"/>
+    <path id="out.dex.jar.input.ref"/>
+    <path id="pathtool.antlibs">
+        <pathelement path="${basedir}/pathtool.jar" />
+    </path>
+    <taskdef resource="anttasks.properties" classpathref="pathtool.antlibs"/>
+    <path id="android.antlibs">
+        <pathelement path="${basedir}/ant/ant-tasks.jar" />
+    </path>
+    <taskdef resource="anttasks.properties" classpathref="android.antlibs" />
+    <!-- ////////////////// 分包相关的设置（end） ////////////////// -->
+
+
+    <!-- ======================================================================= -->
+
+    <!-- 初始化工作 -->
+    <target name="init">
+        <echo>*******************************************</echo>
+        <echo>****************** 初始化 *****************</echo>
+        <echo>*******************************************</echo>
+        <!-- 删除临时目录 -->
+        <delete dir="${outdir-bin}" />
+        <delete dir="${outdir-release}" />
+        <!-- 重新新建临时目录 -->
+        <mkdir dir="${outdir-bin}" />
+        <mkdir dir="${outdir-release}" />
+    </target>
+
+    <!-- 根据工程中的资源文件生成R.java文件,R文件：包含了所有 res/ 目录下资源的 ID  -->
+    <target name="gen-R" depends="init">
+        <echo>*******************************************</echo>
+        <echo>**************** 生成R文件 ****************</echo>
+        <echo>*******************************************</echo>
+
+        <!-- failonerror属性：这个属性用于指定是否出错时命令终止。如果属性取值为true，
+        那么在执行的命令退出的同时返回一个不为0的代码，则构建进程将会中止。-->
+
+        <!-- aapt的命令含义，请在你的开发环境中配置好aapt环境变量后查看，此处只列出部分 -->
+        <!--
+        注意：注释符的限制原因，在使用时切机去掉"-\-"中的"\"！！！！
+        aapt p[ackage] [-d][-f][-m][-u][-v][-x][-z][-M AndroidManifest.xml] \
+        [-0 extension [-0 extension ...]] [-g tolerance] [-j jarfile] \
+        [-\-debug-mode] [-\-min-sdk-version VAL] [-\-target-sdk-version VAL] \
+        [-\-app-version VAL] [-\-app-version-name TEXT] [-\-custom-package VAL] \
+        [-
+        -rename-manifest-package PACKAGE] \
+        [-\-rename-instrumentation-target-package PACKAGE] \
+        [-\-utf16] [-\-auto-add-overlay] \
+        [-\-max-res-version VAL] \
+        [-I base-package [-I base-package ...]] \
+        [-A asset-source-dir]  [-G class-list-file] [-P public-definitions-file] \
+        [-D main-dex-class-list-file] \
+        [-S resource-sources [-S resource-sources ...]] \
+        [-F apk-file] [-J R-file-dir] \
+        [-\-product product1,product2,...] \
+        [-c CONFIGS] [-\-preferred-density DENSITY] \
+        [-\-split CONFIGS [-\-split CONFIGS]] \
+        [-\-feature-of package [-\-feature-after package]] \
+        [raw-files-dir [raw-files-dir] ...] \
+        [-\-output-text-symbols DIR]
+        -->
+
+        <exec executable="${aapt}" failonerror="true">
+            <arg value="package" />
+            <arg value="-f" />
+            <arg value="-m" />
+            <arg value="-J" />
+            <arg value="${outdir-gen}" />
+            <arg value="-S" />
+            <arg value="${resource-dir}" />
+
+            <!-- 库资源 -->
+            <arg value="-S" />
+            <arg value="${library-dir1}/res" />
+
+            <arg value="-M" />
+            <arg value="${manifest-xml}" />
+            <arg value="-I" />
+            <arg value="${android-jar}" />
+            <arg value="--auto-add-overlay" /> <!-- 覆盖资源-->
+        </exec>
+
+    </target>
+
+    <!-- aidl的命令含义，请在你的开发环境中配置好aapt环境变量后查看 -->
+    <!--
+    注意：注释符的限制原因，在使用时切机去掉"-\-"中的"\"！！！！
+    INPUT required
+    usage: aidl OPTIONS INPUT [OUTPUT]
+    aidl -\-preprocess OUTPUT INPUT...
+
+    OPTIONS:
+    -I<DIR>    search path for import statements.
+    -d<FILE>   generate dependency file.
+    -a         generate dependency file next to the output file with the name based on the input file.
+    -ninja     generate dependency file in a format ninja understands.
+    -p<FILE>   file created by -\-preprocess to import.
+    -o<FOLDER> base output folder for generated files.
+    -b         fail when trying to compile a parcelable.
+
+    INPUT:
+    An aidl interface file.
+
+    OUTPUT:
+    The generated interface files.
+    If omitted and the -o option is not used, the input filename is used, with the .aidl extension changed to a .java extension.
+    If the -o option is used, the generated files will be placed in the base output folder, under their package folder
+    -->
+
+    <!-- 编译aidl文件 -->
+    <target name="aidl" depends="gen-R">
+        <echo>*******************************************</echo>
+        <echo>********** 编译AIDL文件（到java） *********</echo>
+        <echo>*******************************************</echo>
+        <apply executable="${aidl}" failonerror="true">
+            <!-- 指定预处理文件 -->
+            <arg value="-p${framework-aidl}" />
+            <!-- aidl声明的目录 -->
+            <arg value="-I${srcdir}" />
+            <!-- 目标文件目录 -->
+            <arg value="-o${outdir-gen}" />
+
+            <!-- 指定哪些文件需要编译 -->
+            <fileset dir="${srcdir}">
+                <include name="*.aidl" />
+            </fileset>
+        </apply>
+    </target>
+
+    <!-- 将工程中的java源文件编译成class文件 -->
+    <target name="compile" depends="aidl">
+        <echo>*******************************************</echo>
+        <echo>***************** 编译Java ****************</echo>
+        <echo>*******************************************</echo>
+
+        <javac bootclasspath="${android-jar}"
+            compiler="javac1.8"
+            destdir="${outdir-classes}"
+            encoding="utf-8"
+            srcdir="."
+            includeantruntime="false"
+            target="1.8">
+            <!-- 库的源文件目录 -->
+            <sourcepath path="${library-dir1}/src" />
+            <classpath>
+
+                <!-- 项目使用了自身libs中的jar时要添加进来 -->
+                <fileset dir="${external-lib}" includes="*.jar" />
+
+                <!-- 库的libs中的jar时要添加进来 -->
+                <fileset dir="${library-dir1}/libs" includes="*.jar" />
+
+            </classpath>
+        </javac>
+    </target>
+
+    <!--
+    ant分包：借鉴与https://github.com/mmin18/Dex65536，具体的使用规则请查阅该开源项目，我在这里只做最少的改动。
+
+    因为该开源项目直接基于ant中ant的build.xml,笔者机器上没有该目录（其实笔
+    者也不想直接用），所以就不直接使用build.xml文件，自行将分包过程需要的资
+    源整合过来，只为演示整个分包的机制。其生成的分包在assets目录下，名为
+    libs.apk,其实际不是一个可安装的apk，而是一个dex。
+    -->
+    <target name="-post-compile" depends="compile">
+
+        <!-- 实际用于分类路径(可自行查看pathtool.jar的内容) -->
+
+        <!--
+        扼要说明：
+        refid： 包含全部jar的路径
+        includeRefid：需要分包的jar（路径）
+        excludeRefid：不需要分包的jar（路径）
+        -->
+
+        <!--/classes2.jar,/classes1.jar,/10k-methods.jar-->
+        <pathtool
+            libs="/more60k.jar"
+            excludeRefid="out.dex.jar.input.ref"
+            includeRefid="out.dex.jar.assets"
+            refid="project.all.jars.path" />
+
+        <!-- 创建目录 -->
+        <mkdir dir="${outdir-bin}/libs.apk" />
+
+        <!-- 将需要分包的jar打包到dex中 -->
+        <dex
+            dexedlibs="${basedir}/${outdir-bin}/libs.apk"
+            disableDexMerger="false"
+            executable="${dx}"
+            forceJumbo="false"
+            nolocals="true"
+            output="${outdir-bin}/libs.apk/classes.dex">
+            <path refid="out.dex.jar.assets" />
+        </dex>
+
+        <!-- 压缩上步生成的dex文件（后缀为apk） -->
+        <zip basedir="${outdir-bin}/libs.apk"
+            destfile="${outdir-bin}/libs-unaligned.apk"
+            includes="*.dex"
+            update="true" />
+
+        <!-- 优化上步生成的文件（优化apk）-->
+        <zipalign
+            executable="${zipalign}"
+            input="${outdir-bin}/libs-unaligned.apk"
+            output="${asset-dir}/libs.apk"
+            verbose="${verbose}" />
+
+    </target>
+
+
+    <!-- 将.class文件转化成.dex文件 -->
+    <target name="dex" depends="-post-compile">
+
+        <echo>*******************************************</echo>
+        <echo>******** （通过class）生成dex文件 *********</echo>
+        <echo>*******************************************</echo>
+
+        <!--<echo>################</echo>-->
+        <!--<property name="all_classpath" refid="project.all.jars.path"/>-->
+        <!--<property name="exclude_classpath" refid="out.dex.jar.input.ref"/>-->
+        <!--<property name="include_classpath" refid="out.dex.jar.assets"/>-->
+        <!--<echo>all ==> ${all_classpath}</echo>-->
+        <!--<echo>exclude ==> ${exclude_classpath}</echo>-->
+        <!--<echo>include ==> ${include_classpath}</echo>&ndash;&gt;-->
+
+        <jar
+            jarfile="${outdir-classes-ospath}/${jar.app.name}"
+            basedir="${outdir-classes-ospath}" >
+            <include name="**/*.class"/>
+
+            <!--<manifest>-->
+                <!--<attribute name="Created-By" value="${created-by}" />-->
+                <!--<attribute name="Main-Class" value="${main-class}" />-->
+                <!--<attribute name="Class-Path" value="${classpath.first}${mf.classpath}" />-->
+            <!--</manifest>-->
+        </jar>
+
+        <!--
+        这里该用dx命令会怎么样，请大家可以试试（com.android.dex.DexException: Multiple dex files define）
+        -->
+        <!--<exec executable="${dx}" failonerror="true">-->
+            <!--<arg value="&#45;&#45;dex" />-->
+            <!--<arg value="&#45;&#45;output=${dex-ospath}" />-->
+            <!--<arg value="${outdir-classes-ospath}" />-->
+            <!--<arg value="${external-lib-ospath}" />-->
+        <!--</exec>-->
+        <dex
+            dexedlibs="${basedir}/${outdir-bin}/libs.apk"
+            disableDexMerger="false"
+            executable="${dx}"
+            forceJumbo="false"
+            nolocals="true"
+            output="${dex-ospath}">
+            <fileset dir="${outdir-classes-ospath}" includes="main.jar" />
+            <!-- 使用到的libs(无需打到分包中的) -->
+            <path refid="out.dex.jar.input.ref" />
+        </dex>
+    </target>
+
+    <!-- (二次打包)将资源文件放进输出目录 -->
+    <target name="package-res-and-assets">
+
+        <echo>*******************************************</echo>
+        <echo>************* 整合静态资源文件 ************</echo>
+        <echo>*******************************************</echo>
+
+        <exec executable="${aapt}" failonerror="true">
+            <arg value="package" />
+            <arg value="-f" />
+            <arg value="-M" />
+            <arg value="${manifest-xml}" />
+
+            <!-- 主应用的静态资源 -->
+            <arg value="-S" />
+            <arg value="${resource-dir}" />
+            <arg value="-A" />
+            <arg value="${asset-dir}" />
+
+            <!-- 注意点:如果引用了库，同时需要调用Library的res/assets -->
+            <arg value="-S" />
+            <arg value="${library-dir1}/res" />
+            <arg value="-A" />
+            <arg value="${library-dir1}/assets" />
+
+            <arg value="-I" />
+            <arg value="${android-jar}" />
+
+            <arg value="--version-code" />
+            <arg value="${version-code}" />
+
+            <arg value="--version-name" />
+            <arg value="${version-name}" />
+
+            <arg value="--min-sdk-version" />
+            <arg value="${min-sdk-version}" />
+
+            <arg value="--target-sdk-version" />
+            <arg value="${target-sdk-version}" />
+
+            <arg value="-F" />
+            <arg value="${resources-package}" />
+            <arg value="--auto-add-overlay" />   <!-- 覆盖资源 -->
+        </exec>
+    </target>
+
+    <!-- 打包成未签证的apk -->
+    <target name="package" depends="dex, package-res-and-assets">
+
+        <echo>*******************************************</echo>
+        <echo>************ 打包apk（未签名） ************</echo>
+        <echo>*******************************************</echo>
+
+        <!-- 旧SDK时使用apkbuilder生成apk -->
+        <!-- <exec executable="${apkbuilder}" failonerror="true">-->
+        <!-- <arg value="${out-unsigned-package-ospath}" />-->
+        <!-- <arg value="-u" />-->
+        <!-- <arg value="-z" />-->
+        <!-- <arg value="${resources-package-ospath}" />-->
+        <!-- <arg value="-f" />-->
+        <!-- <arg value="${dex-ospath}" />-->
+        <!-- <arg value="-rf" />-->
+        <!-- <arg value="${srcdir-ospath}" />-->
+        <!-- </exec>-->
+
+        <!-- 新SDK时使用sdklib.jar生成apk -->
+        <java classname="com.android.sdklib.build.ApkBuilderMain"
+            classpath="${sdk-tools}/lib/sdklib-26.0.0-dev.jar">
+            <!-- 输出apk的路径 -->
+            <arg value="${out-unsigned-package-ospath}" />
+            <!-- u指创建未签名的包-->
+            <arg value="-u" />
+            <!-- 指定前资源压缩包路径res.zip文件路径 -->
+            <arg value="-z" />
+            <!-- 资源压缩包 -->
+            <arg value="${resources-package-ospath}" />
+            <!-- 前面已经生产的，要打包的dex压缩文件 -->
+            <arg value="-f" />
+            <arg value="${dex-ospath}" />
+            <!--引用的第三方jar以及其中的资源文件，按照一定的格式放置到apk文件夹中  -->
+            <arg value="-rf" />
+            <arg value="${srcdir-ospath}" />
+
+            <!-- 使用到的libs，不管时内部的还是外部的 -->
+            <arg value="-rj" />
+            <arg value="${external-lib-ospath}" />
+
+            <!--<arg value="-rj" />-->
+            <!--<arg value="${library-dir1}/libs" />-->
+
+            <!-- 将主项目libs下面的so库打包 -->
+            <arg value="-nf" />
+            <arg value="${external-lib-ospath}" />
+        </java>
+    </target>
+
+
+    <!-- 对apk进行签证 -->
+    <target name="jarsigner" depends="package">
+
+        <echo>*******************************************</echo>
+        <echo>***************** 签名apk *****************</echo>
+        <echo>*******************************************</echo>
+
+        <exec executable="${jarsigner}" failonerror="true">
+            <arg value="-keystore" />
+            <arg value="${keystore-file}" />
+
+            <!-- 没有-tsa此项会报时间戳的问题，如果当前网址不能用时，更换一个可用的时间戳认证网址即可 -->
+            <arg value="-tsa" />
+            <arg value="http://tsa.starfieldtech.com/" />
+
+            <arg value="-digestalg" />
+            <arg value="SHA1" />
+            <arg value="-sigalg" />
+            <arg value="MD5withRSA" />
+
+            <!-- 密钥库密码 -->
+            <arg value="-storepass" />
+            <arg value="your password" />
+
+            <!-- 密钥密码 -->
+            <arg value="-keypass" />
+            <arg value="your password" />
+
+            <arg value="-signedjar" />
+            <arg value="${out-signed-package-ospath}" />
+            <arg value="${out-unsigned-package-ospath}" />
+            <!-- 证书的别名 -->
+            <arg value="key0" />
+        </exec>
+    </target>
+
+    <target name="release" depends="jarsigner">
+        <!-- 删除未签证apk -->
+        <!--<delete file="${out-unsigned-package-ospath}" />-->
+        <delete dir="${outdir-bin}" />
+        <echo>打包完成. path:${out-signed-package-ospath}</echo>
+    </target>
+
+</project>
