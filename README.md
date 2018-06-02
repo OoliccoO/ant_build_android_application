@@ -233,8 +233,8 @@ apache ant的简介和常用标签说明，请查阅[apache ant(百度百科)](h
     </target>
 ```
 
-(5).分包。首先先感谢Tu Yimin分享一个开源项目：https://github.com/mmin18/Dex65536， 里面分享了一个如何借助ant来进行分包，从而解决低
-版本下的65536问题，该项目分享了一种基于ant原生的build.xml,然后重写<target name="-post-compile">来实现分包；文章开篇时提过，笔者
+(5).分包。首先先感谢Tu Yimin分享一个开源项目：https://github.com/mmin18/Dex65536， 里面分享了一个如何借助ant进行分包的例子，从而解决低
+版本系统下的65536异常问题，该项目分享了一种基于ant原生的build.xml,然后重写<target name="-post-compile">来实现分包；文章开篇时提过，笔者
 不直接使用build.xml,根据该开源项目的分包原理，笔者提取核心内容来实现了分包。其中在主项目的ant目录下包含了分包过程中需要到的jar，如果笔
 者现在提供的jar在你的开发环境下无法使用时，请自行下载，核心jar为ant-tasks.jar，其内部的MANIFEST.MF文件中有相关的Class-Path说明。<br>
 
@@ -311,7 +311,8 @@ apache ant的简介和常用标签说明，请查阅[apache ant(百度百科)](h
         } else {
             nativeLibraryDir = "/data/data/" + ai.packageName + "/lib/";
         }
-        DexClassLoader dcl = new DexClassLoader(dexFile.getAbsolutePath(), dexOpt.getAbsolutePath(), nativeLibraryDir, cl.getParent());
+        DexClassLoader dcl = new DexClassLoader(dexFile.getAbsolutePath(), 
+        dexOpt.getAbsolutePath(), nativeLibraryDir, cl.getParent());
         try {
             // ClassLoader.class.getDeclaredField这里值得注意的，parent变量只存在在java.lang.ClassLoaderz
             Field f = ClassLoader.class.getDeclaredField("parent");
