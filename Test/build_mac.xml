@@ -316,7 +316,7 @@
 
         <!--/classes2.jar,/classes1.jar,/10k-methods.jar-->
         <pathtool
-            libs="/more60k.jar"
+            libs="/more60k.jar,"
             excludeRefid="out.dex.jar.input.ref"
             includeRefid="out.dex.jar.assets"
             refid="project.all.jars.path" />
@@ -368,25 +368,17 @@
 
         <jar
             jarfile="${outdir-classes-ospath}/${jar.app.name}"
-            basedir="${outdir-classes-ospath}" >
+            basedir="${outdir-classes-ospath}">
             <include name="**/*.class"/>
 
             <!--<manifest>-->
-                <!--<attribute name="Created-By" value="${created-by}" />-->
-                <!--<attribute name="Main-Class" value="${main-class}" />-->
-                <!--<attribute name="Class-Path" value="${classpath.first}${mf.classpath}" />-->
+            <!--<attribute name="Created-By" value="${created-by}" />-->
+            <!--<attribute name="Main-Class" value="${main-class}" />-->
+            <!--<attribute name="Class-Path" value="${classpath.first}${mf.classpath}" />-->
             <!--</manifest>-->
+
         </jar>
 
-        <!--
-        这里该用dx命令会怎么样，请大家可以试试（com.android.dex.DexException: Multiple dex files define）
-        -->
-        <!--<exec executable="${dx}" failonerror="true">-->
-            <!--<arg value="&#45;&#45;dex" />-->
-            <!--<arg value="&#45;&#45;output=${dex-ospath}" />-->
-            <!--<arg value="${outdir-classes-ospath}" />-->
-            <!--<arg value="${external-lib-ospath}" />-->
-        <!--</exec>-->
         <dex
             dexedlibs="${basedir}/${outdir-bin}/libs.apk"
             disableDexMerger="false"
@@ -394,7 +386,9 @@
             forceJumbo="false"
             nolocals="true"
             output="${dex-ospath}">
-            <fileset dir="${outdir-classes-ospath}" includes="main.jar" />
+            <path>
+                <pathelement path="${outdir-classes-ospath}/main.jar"/>
+            </path>
             <!-- 使用到的libs(无需打到分包中的) -->
             <path refid="out.dex.jar.input.ref" />
         </dex>
@@ -453,7 +447,7 @@
         <echo>************ 打包apk（未签名） ************</echo>
         <echo>*******************************************</echo>
 
-        <!-- 旧SDK时使用apkbuilder生成apk -->
+        <!-- 旧版SDK时使用apkbuilder生成apk -->
         <!-- <exec executable="${apkbuilder}" failonerror="true">-->
         <!-- <arg value="${out-unsigned-package-ospath}" />-->
         <!-- <arg value="-u" />-->
@@ -465,7 +459,7 @@
         <!-- <arg value="${srcdir-ospath}" />-->
         <!-- </exec>-->
 
-        <!-- 新SDK时使用sdklib.jar生成apk -->
+        <!-- 新版SDK时使用sdklib.jar生成apk -->
         <java classname="com.android.sdklib.build.ApkBuilderMain"
             classpath="${sdk-tools}/lib/sdklib-26.0.0-dev.jar">
             <!-- 输出apk的路径 -->
@@ -476,28 +470,29 @@
             <arg value="-z" />
             <!-- 资源压缩包 -->
             <arg value="${resources-package-ospath}" />
-            <!-- 前面已经生产的，要打包的dex压缩文件 -->
+
             <arg value="-f" />
             <arg value="${dex-ospath}" />
-            <!--引用的第三方jar以及其中的资源文件，按照一定的格式放置到apk文件夹中  -->
-            <arg value="-rf" />
-            <arg value="${srcdir-ospath}" />
+
+            <!-- 引用的第三方jar以及其中的资源文件 -->
+            <!--<arg value="-rf" />-->
+            <!--<arg value="${srcdir-ospath}" />-->
 
             <!-- 使用到的libs，不管时内部的还是外部的 -->
-            <arg value="-rj" />
-            <arg value="${external-lib-ospath}" />
-
+            <!--<arg value="-rj" />-->
+            <!--<arg value="${external-lib-ospath}" />-->
             <!--<arg value="-rj" />-->
             <!--<arg value="${library-dir1}/libs" />-->
 
-            <!-- 将主项目libs下面的so库打包 -->
-            <arg value="-nf" />
-            <arg value="${external-lib-ospath}" />
+            <!-- 将主项目libs下面的so库打包(这里没有使用到) -->
+            <!--<arg value="-nf" />-->
+            <!--<arg value="${external-lib-ospath}" />-->
+
         </java>
     </target>
 
 
-    <!-- 对apk进行签证 -->
+    <!-- 对apk进行签名 -->
     <target name="jarsigner" depends="package">
 
         <echo>*******************************************</echo>
@@ -516,15 +511,12 @@
             <arg value="SHA1" />
             <arg value="-sigalg" />
             <arg value="MD5withRSA" />
-
             <!-- 密钥库密码 -->
             <arg value="-storepass" />
-            <arg value="your password" />
-
+            <arg value="xxxxxxx" />
             <!-- 密钥密码 -->
             <arg value="-keypass" />
-            <arg value="your password" />
-
+            <arg value="xxxxxxx" />
             <arg value="-signedjar" />
             <arg value="${out-signed-package-ospath}" />
             <arg value="${out-unsigned-package-ospath}" />
