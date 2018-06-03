@@ -35,7 +35,7 @@
 >>project.properties (暂无用)<br><br>
 
 ## macOS下配置和使用ant
-1.ant下载，官方下载链接：http://ant.apache.org/bindownload.cgi, 笔者下载的版本为[1.10.3 .zip archive: apache-ant-1.10.3-bin.zip](http://mirror.bit.edu.cn/apache//ant/binaries/apache-ant-1.10.3-bin.zip)。<br>
+1.ant下载，官方下载链接：http://ant.apache.org/bindownload.cgi, 笔者下载的版本为[1.10.3 .zip archive: apache-ant-1.10.3-bin.zip](http://mirror.bit.edu.cn/apache//ant/binaries/apache-ant-1.10.3-bin.zip)，下载完毕后解压到一个任意不含中文的路径即可。<br>
 2.配置ant环境变量<br>
 (1).开启终端，获取root权限：$sudo -s，然后输入管理员密码（即开机密码）。<br>
 (2).修改bashrc文件读写权限：chmod +w /etc/bashrc 。<br>
