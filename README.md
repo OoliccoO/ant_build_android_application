@@ -1,6 +1,6 @@
 
 ## 说明
-该例子所运行的系统为macOS High Sierra,但对于window用户同样具有参考意义，下面笔者只针对macOS下的配置和使用作详细说明，window用户需自行进行ant等的配置。在例子中笔者不直接使用ant原有的build.xml（但是该文档有很多值得参考的地方，读者请自行研究），而是使用了一个自定义的build_mac.xml，里面详细的把整个构建过程分类说明，包含每个阶段需要使用到什么命令和命令如何调用，以及如何分包（解决65536的问题）都作了说明，对于学习如何使用ant构建android应用的初学者来说是会是一篇不错的文章。注意：该文章中使用到的项目程序是笔者随意找来作例子使用，项目的程序逻辑和书写风格等不在该文章讨论的范围。<br><br>
+该例子所运行的系统为macOS High Sierra,但对于window用户同样具有参考意义，下面笔者只针对macOS下的配置和使用作详细说明，window用户需自行进行ant等的配置。在例子中笔者不直接使用ant原有的build.xml（但是该文档有很多值得参考的地方，读者请自行研究），而是使用了一个自定义的build_mac.xml，里面详细的把整个构建过程分类说明，包含每个阶段需要使用到什么命令和命令如何调用，以及如何分包（解决[65535异常问题](http://androidxref.com/4.4_r1/xref/external/dexmaker/src/dx/java/com/android/dx/dex/file/MemberIdsSection.java)）都作了说明，对于学习如何使用ant构建android应用的初学者来说是会是一篇不错的文章。注意：该文章中使用到的项目程序是笔者随意找来作例子使用，项目的程序逻辑和书写风格等不在该文章讨论的范围。<br><br>
 
 ## 项目的结构
 [主项目](https://github.com/OoliccoO/ant_build_android_application/tree/master/Test)<br>
@@ -36,7 +36,7 @@
 
 ## macOS下配置和使用ant
 1.ant下载，官方下载链接：http://ant.apache.org/bindownload.cgi, 笔者下载的版本为[1.10.3 .zip archive: apache-ant-1.10.3-bin.zip](http://mirror.bit.edu.cn/apache//ant/binaries/apache-ant-1.10.3-bin.zip)，下载完毕后解压到一个任意不含中文的路径即可。<br>
-2.配置ant环境变量<br>
+2.配置ant环境变量(这里只是参考，读者可以按照网上其他方式配置，只要正常使用即可)<br>
 (1).开启终端，获取root权限：$sudo -s，然后输入管理员密码（即开机密码）。<br>
 (2).修改bashrc文件读写权限：chmod +w /etc/bashrc 。<br>
 (3).修改bashrc文件：vi /etc/bashrc，按i键进入编辑状态，在文件末尾加入下面两行<br>
@@ -233,8 +233,8 @@ apache ant的简介和常用标签说明，请查阅[apache ant(百度百科)](h
     </target>
 ```
 
-(5).分包。感谢Tu Yimin分享一个开源项目：[Dex65536](https://github.com/mmin18/Dex65536)， 里面分享了一个如何借助ant进行分包的例子，从而解决低
-版本系统下的[65536异常问题](http://androidxref.com/4.4_r1/xref/external/dexmaker/src/dx/java/com/android/dx/dex/file/MemberIdsSection.java)，该项目分享了一种基于ant原生的build.xml,然后重写<target name="-post-compile">来实现分包；文章开篇时提过，笔者
+(5).分包。感谢Tu Yimin分享一个开源项目：[Dex65536](https://github.com/mmin18/Dex65536)， 里面分享了一个如何借助ant进行分包的例子，从而解决低版本系统下的[65535异常问题](http://androidxref.com/4.4_r1/xref/external/dexmaker/src/dx/java/com/android/dx/dex/file/MemberIdsSection.java)，该项目分享了一种基于ant原生的build.xml,然后重写<target name="-post-compile">来实现分包；文章开篇时提过，笔者
+版本系统下的[65535异常问题](http://androidxref.com/4.4_r1/xref/external/dexmaker/src/dx/java/com/android/dx/dex/file/MemberIdsSection.java)，该项目分享了一种基于ant原生的build.xml,然后重写<target name="-post-compile">来实现分包；文章开篇时提过，笔者
 不直接使用build.xml,根据该开源项目的分包原理，笔者提取核心内容来实现了分包。其中在主项目的ant目录下包含了分包过程中需要到的jar，如果笔
 者现在提供的jar在你的开发环境下无法使用时，请自行下载，核心jar为ant-tasks.jar，其内部的MANIFEST.MF文件中有相关的Class-Path说明。<br>
 
