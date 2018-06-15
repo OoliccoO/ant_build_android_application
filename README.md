@@ -233,7 +233,7 @@ apache ant的简介和常用标签说明，请查阅[apache ant(百度百科)](h
     </target>
 ```
 
-(5).分包。感谢Tu Yimin分享一个开源项目：[Dex65536](https://github.com/mmin18/Dex65536)， 里面分享了一个如何借助ant进行分包的例子，从而解决低版本系统下的[65535异常问题](http://androidxref.com/4.4_r1/xref/external/dexmaker/src/dx/java/com/android/dx/dex/file/MemberIdsSection.java)，该项目分享了一种基于ant原生的build.xml,然后重写```<target name="-post-compile">```来实现分包；文章开篇时提过，笔者不直接使用build.xml,根据该开源项目的分包原理，笔者提取其核心内容来实现了分包。其中在主项目的ant目录下包含了分包过程中需要到的jar，如果笔者现在提供的jar在你的开发环境下无法使用时，请自行下载，其中核心jar为ant-tasks.jar(这个你也可以使用自己的)，其内部的MANIFEST.MF文件中有相关的Class-Path说明，补起其他必要的jar即可。<br>
+(5).分包。感谢Tu Yimin分享一个开源项目：[Dex65536](https://github.com/mmin18/Dex65536)， 里面分享了一个如何借助ant进行分包的例子，从而解决低版本系统下的[65535异常问题](http://androidxref.com/4.4_r1/xref/external/dexmaker/src/dx/java/com/android/dx/dex/file/MemberIdsSection.java)，该项目分享了一种基于ant原生的build.xml,然后重写```<target name="-post-compile">```来实现分包；文章开篇时提过，笔者不直接使用build.xml,根据该开源项目的分包原理，笔者提取其核心内容来实现了分包。其中在主项目的ant目录下包含了分包过程中需要到的jar，如果笔者现在提供的jar在你的开发环境下无法使用时，请自行下载，其中核心jar为ant-tasks.jar(这个你也可以使用自己的)，其内部的MANIFEST.MF文件中有相关的Class-Path说明，补齐需要用到的jar即可。<br>
 
 ```
     <target name="-post-compile" depends="compile">
